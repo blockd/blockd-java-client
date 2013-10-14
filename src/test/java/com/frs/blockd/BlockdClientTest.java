@@ -8,7 +8,7 @@ public class BlockdClientTest {
     @Test
     public void rockyTest() throws Exception {
 
-        BlockdClient client = new BlockdClient("localhost", 8000);
+        BlockdClient client = new BlockdClient("localhost", 11311);
         client.connect();
         System.out.println(client.wisdom());
         System.out.println(client.aquire("APOLLO"));
