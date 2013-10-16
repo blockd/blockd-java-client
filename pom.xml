@@ -10,6 +10,23 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
+    <scm>
+    <connection>scm:git:https://github.com/blockd/blockd-java-client.git</connection>
+    <developerConnection>scm:git:https://github.com/blockd/blockd-java-client.git</developerConnection>
+    <url>http://github.com/blockd/blockd-java-client</url>
+  </scm>
+	  <distributionManagement>
+	    <repository>
+	      <id>central</id>
+	      <name>FRS Release Repository</name>
+	      <url>https://dev.flexrentalsolutions.com/nexus/content/repositories/releases/</url>
+	    </repository>
+	    <snapshotRepository>
+	      <id>snapshots</id>
+	      <name>FRS Snapshot Repository</name>
+	      <url>https://dev.flexrentalsolutions.com/nexus/content/repositories/snapshots/</url>
+	    </snapshotRepository>
+	  </distributionManagement>
     <dependencies>
         <dependency>
             <groupId>junit</groupId>
@@ -81,7 +98,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>2.8</version>
                 <configuration>
-                    <skipTests>true</skipTests>
+                    <skipTests>false</skipTests>
                 </configuration>
             </plugin>
         </plugins>
