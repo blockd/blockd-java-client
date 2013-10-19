@@ -5,6 +5,8 @@ import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * This is a simple client for the Blockd Server.
@@ -12,6 +14,7 @@ import java.net.Socket;
  */
 public class SimpleClient implements BlockdClient {
 
+    private ArrayList<BlockdListener> listeners = new ArrayList<BlockdListener>();
     private Socket socket;
     private OutputStream outputStream;
     private BufferedInputStream inputStream;
@@ -123,7 +126,7 @@ public class SimpleClient implements BlockdClient {
     }
 
     /**
-     * Calls blockd's ACQUIRE command to lock the give lock identifier.
+     * Calls blockd's ACQUIRE command to lock the given lock identifier.
      *
      * @param lockId The id to lock
      * @return
@@ -133,12 +136,24 @@ public class SimpleClient implements BlockdClient {
     public String acquire(String lockId) throws Exception {
 
         sendCommand(String.format("ACQUIRE %s", lockId));
-        return (readResponse());
+        String response = readResponse();
+        if ( response.startsWith("LOCKPENDING") ) {
+            while (inputStream.available() == 0) {
+                Thread.sleep(100);
+            }
+            response = readResponse();
+            if ( response.startsWith("ACQUIRETIMEOUT") ) {
+                throw new Exception("ACQUIRETIMEOUT for " + lockId);
+            }
+        }
+        return ( response );
     }
 
     /**
      * Calls blockd's ACQUIRE command to lock the given lock identifier
-     * with the specified timeout.
+     * with the specified timeout. If the lock is not available, this
+     * method will block until <code>timeout</code> is reached, or the
+     * lock becomes available.
      *
      * @param lockId  The identifier to lock
      * @param timeout The amount of time to wait for a lock.
@@ -149,7 +164,17 @@ public class SimpleClient implements BlockdClient {
     public String acquire(String lockId, int timeout) throws Exception {
 
         sendCommand(String.format("ACQUIRE %s %d W", lockId, timeout));
-        return (readResponse());
+        String response = readResponse();
+        if ( response.startsWith("LOCKPENDING") ) {
+            while (inputStream.available() == 0) {
+                Thread.sleep(100);
+            }
+            response = readResponse();
+            if ( response.startsWith("ACQUIRETIMEOUT") ) {
+                throw new Exception("ACQUIRETIMEOUT for " + lockId);
+            }
+        }
+        return ( response );
     }
 
     /**
@@ -166,7 +191,17 @@ public class SimpleClient implements BlockdClient {
     public String acquire(String lockId, int timeout, char mode) throws Exception {
 
         sendCommand(String.format("ACQUIRE %s %d %s", lockId, timeout, mode));
-        return (readResponse());
+        String response = readResponse();
+        if ( response.startsWith("LOCKPENDING") ) {
+            while (inputStream.available() == 0) {
+                Thread.sleep(100);
+            }
+            response = readResponse();
+            if ( response.startsWith("ACQUIRETIMEOUT") ) {
+                throw new Exception("ACQUIRETIMEOUT for " + lockId);
+            }
+        }
+        return ( response );
     }
 
     /**
@@ -180,7 +215,11 @@ public class SimpleClient implements BlockdClient {
     public String release(String lockId) throws Exception {
 
         sendCommand(String.format("RELEASE %s", lockId));
-        return (readResponse());
+        String response = readResponse();
+        if (response.startsWith("NOLOCKTORELEASE") ) {
+            throw new Exception("NOLOCKTORELEASE for " + lockId);
+        }
+        return (response);
     }
 
     /**
@@ -193,6 +232,8 @@ public class SimpleClient implements BlockdClient {
     public String releaseAll() throws Exception {
 
         sendCommand("RELEASEALL");
+        // TODO: Server will send a RELEASED XYZ for each
+        // lock, so get them all.
         return (readResponse());
     }
 
@@ -203,7 +244,7 @@ public class SimpleClient implements BlockdClient {
      * @param cmd The string to be printed.
      * @throws Exception
      */
-    private void sendCommand(String cmd) throws Exception {
+    private synchronized void sendCommand(String cmd) throws Exception {
 
         outputStream.write(cmd.getBytes());
         outputStream.write('\n');
@@ -217,7 +258,7 @@ public class SimpleClient implements BlockdClient {
      * @return The string that was read.
      * @throws IOException
      */
-    private String readResponse() throws IOException {
+    private synchronized String readResponse() throws IOException {
 
         int maxBytes = 1024;
         byte[] buffer = new byte[maxBytes];
@@ -239,4 +280,41 @@ public class SimpleClient implements BlockdClient {
         return new String(buffer, 0, bytesRead);
     }
 
+    /**
+     * This method adds a <code>BlockdListener</code> to this client
+     * for notification of async command results.
+     *
+     * @param listener  The listener to add.
+     */
+    @Override
+    public void addBlockdListener(BlockdListener listener) {
+
+        if ( !listeners.contains(listener) ) {
+            listeners.add(listener);
+        }
+    }
+
+    /**
+     * This method removes a previously added <code>BlockdListener</code>
+     * from this client.
+     *
+     * @param listener The listener to remove.
+     */
+    @Override
+    public void removeBlockdListener(BlockdListener listener) {
+
+        listeners.remove(listener);
+    }
+
+    /**
+     * This method returns a list of the currently reigstered
+     * <code>BlockdListener</code> listeners.
+     *
+     * @return  The list of current listeners.
+     */
+    @Override
+    public List<BlockdListener> getListeners() {
+
+        return ( listeners );
+    }
 }

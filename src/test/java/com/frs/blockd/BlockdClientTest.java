@@ -11,7 +11,7 @@ public class BlockdClientTest {
         SimpleClient client = new SimpleClient("localhost", 11311);
         client.connect();
         System.out.println(client.wisdom());
-        System.out.println(client.acquire("APOLLO"));
+        System.out.println(client.acquire("JOHN"));
         System.out.println(client.acquire("MICK", 1000));
         System.out.println(client.acquire("ROCKY", 2000, 'R'));
         Thread.sleep(1000);
@@ -20,6 +20,20 @@ public class BlockdClientTest {
         System.out.println(client.release("APOLLO"));
         System.out.println(client.release("MICK"));
         client.quit();
+    }
+
+    @Test
+    public void twoClientsOneLock() throws Exception {
+        SimpleClient clientOne = new SimpleClient("localhost", 11311);
+        SimpleClient clientTwo = new SimpleClient("localhost", 11311);
+
+        clientOne.connect();
+        clientTwo.connect();
+
+        System.out.println(clientOne.acquire("BESPOKE"));
+
+        System.out.println(clientTwo.acquire("BESPOKE"));
+
     }
 
 }

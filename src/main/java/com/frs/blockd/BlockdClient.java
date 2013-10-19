@@ -1,5 +1,7 @@
 package com.frs.blockd;
 
+import java.util.List;
+
 /**
  * The base interface for blockd clients.
  */
@@ -103,4 +105,10 @@ public interface BlockdClient {
      * @throws Exception
      */
     public String releaseAll() throws Exception;
+
+    public void addBlockdListener(BlockdListener listener);
+
+    public void removeBlockdListener(BlockdListener listener);
+
+    public List<BlockdListener> getListeners();
 }

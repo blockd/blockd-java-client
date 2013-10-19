@@ -1,15 +1,18 @@
 package com.frs.blockd;
 
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.TreeMap;
 
 /**
  * The ClusterClient is simply a wrapper around multiple BasicClient instances.
- * A very simple consistent hashing method is used to route requests to a particular
+ * A very simple "consistent hashing" method is used to route requests to a particular
  * server.
  */
 public class ClusterClient implements BlockdClient {
 
+    private ArrayList<BlockdListener> listeners = new ArrayList<BlockdListener>();
     private TreeMap<Integer, SimpleClient> nodes = new TreeMap<Integer, SimpleClient>();
 
     /**
@@ -32,11 +35,11 @@ public class ClusterClient implements BlockdClient {
     }
 
     /**
-     * A very contrived has function, but one that should be easily
-     * implemented in JS also.
+     * A very contrived hash function, but one that should be easily
+     * implemented in JS.
      *
-     * @param key
-     * @return
+     * @param key   The value to be hashed.
+     * @return      An integer has representing the key.
      */
     private int computeHash(String key) {
 
@@ -52,8 +55,8 @@ public class ClusterClient implements BlockdClient {
      * Determine which server will handle a request for a given
      * lockId.
      *
-     * @param lockId
-     * @return
+     * @param lockId    A lock
+     * @return          The key of the server that should handle this lock.
      * @throws Exception
      */
     public int whichNode(String lockId) throws Exception {
@@ -74,12 +77,22 @@ public class ClusterClient implements BlockdClient {
         throw new Exception("Should never get here!");
     }
 
+    /**
+     * For this client, this is a no-op.
+     *
+     * @return  null
+     */
     @Override
     public String getHost() {
 
         return (null);
     }
 
+    /**
+     * For this client, this is a no-op.
+     *
+     * @return Zero
+     */
     @Override
     public int getPort() {
 
@@ -249,5 +262,43 @@ public class ClusterClient implements BlockdClient {
             buff.append("\n");
         }
         return (buff.toString());
+    }
+
+    /**
+     * This method adds a <code>BlockdListener</code> to this client
+     * for notification of async command results.
+     *
+     * @param listener  The listener to add.
+     */
+    @Override
+    public void addBlockdListener(BlockdListener listener) {
+
+        if ( !listeners.contains(listener) ) {
+            listeners.add(listener);
+        }
+    }
+
+    /**
+     * This method removes a previously added <code>BlockdListener</code>
+     * from this client.
+     *
+     * @param listener The listener to remove.
+     */
+    @Override
+    public void removeBlockdListener(BlockdListener listener) {
+
+        listeners.remove(listener);
+    }
+
+    /**
+     * This method returns a list of the currently reigstered
+     * <code>BlockdListener</code> listeners.
+     *
+     * @return  The list of current listeners.
+     */
+    @Override
+    public List<BlockdListener> getListeners() {
+
+        return ( listeners );
     }
 }
