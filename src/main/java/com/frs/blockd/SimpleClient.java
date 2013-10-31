@@ -1,5 +1,8 @@
 package com.frs.blockd;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
@@ -14,12 +17,12 @@ import java.util.List;
  */
 public class SimpleClient implements BlockdClient {
 
-    private ArrayList<BlockdListener> listeners = new ArrayList<BlockdListener>();
     private Socket socket;
     private OutputStream outputStream;
     private BufferedInputStream inputStream;
     private String host;
     private int port;
+
 
     /**
      * Constructor. Sets the host and port, but won't connect to the server
@@ -66,9 +69,9 @@ public class SimpleClient implements BlockdClient {
         socket = new Socket(host, port);
         outputStream = new BufferedOutputStream(socket.getOutputStream());
         inputStream = new BufferedInputStream(socket.getInputStream());
-        String ehlo = readResponse();
-        if ("IMUSTBLOCKYOU".equals(ehlo) == false) {
-            throw new Exception("Invalid registration response.");
+        JSONObject obj = readResponse();
+        if ( "IMUSTBLOCKYOU".equals(obj.getString("status")) == false ) {
+            throw new Exception("Invalid connect response.");
         }
     }
 
@@ -93,7 +96,11 @@ public class SimpleClient implements BlockdClient {
     @Override
     public void quit() throws Exception {
 
-        sendCommand("QUIT");
+        JSONObject request = new JSONObject();
+        request.put("command", "QUIT");
+        request.put("nonce", System.currentTimeMillis());
+        sendCommand(request);
+        JSONObject response = readResponse();
         outputStream.close();
         inputStream.close();
         socket.close();
@@ -102,14 +109,17 @@ public class SimpleClient implements BlockdClient {
     /**
      * Calls blockd's WISDOM command.
      *
-     * @return Wisdom
      * @throws Exception
      */
     @Override
     public String wisdom() throws Exception {
 
-        sendCommand("WISDOM");
-        return (readResponse());
+        JSONObject request = new JSONObject();
+        request.put("command", "WISDOM");
+        request.put("nonce", System.currentTimeMillis());
+        sendCommand(request);
+        JSONObject response = readResponse();
+        return ( response.getString("quote"));
     }
 
     /**
@@ -119,10 +129,22 @@ public class SimpleClient implements BlockdClient {
      * @throws Exception
      */
     @Override
-    public String show() throws Exception {
+    public List<String> show() throws Exception {
 
-        sendCommand("SHOW");
-        return (readResponse());
+        List<String> lockIds = new ArrayList<String>();
+        JSONObject request = new JSONObject();
+        request.put("command", "SHOW");
+        request.put("nonce", System.currentTimeMillis());
+        sendCommand(request);
+        JSONObject response = readResponse();
+        JSONArray locks = response.getJSONArray("locks");
+        StringBuffer buff = new StringBuffer();
+        for ( int i = 0; i < locks.length(); i++ ) {
+            JSONObject lock = locks.getJSONObject(i);
+            lockIds.add(lock.getString("lockId"));
+
+        }
+        return (lockIds);
     }
 
     /**
@@ -135,18 +157,13 @@ public class SimpleClient implements BlockdClient {
     @Override
     public String acquire(String lockId) throws Exception {
 
-        sendCommand(String.format("ACQUIRE %s", lockId));
-        String response = readResponse();
-        if ( response.startsWith("LOCKPENDING") ) {
-            while (inputStream.available() == 0) {
-                Thread.sleep(100);
-            }
-            response = readResponse();
-            if ( response.startsWith("ACQUIRETIMEOUT") ) {
-                throw new Exception("ACQUIRETIMEOUT for " + lockId);
-            }
-        }
-        return ( response );
+        JSONObject request = new JSONObject();
+        request.put("command", "ACQUIRE");
+        request.put("lockId", lockId);
+        request.put("nonce", System.currentTimeMillis());
+        sendCommand(request);
+        JSONObject response = readResponse();
+        return ( response.getString("status"));
     }
 
     /**
@@ -163,18 +180,24 @@ public class SimpleClient implements BlockdClient {
     @Override
     public String acquire(String lockId, int timeout) throws Exception {
 
-        sendCommand(String.format("ACQUIRE %s %d W", lockId, timeout));
-        String response = readResponse();
-        if ( response.startsWith("LOCKPENDING") ) {
+        JSONObject request = new JSONObject();
+        request.put("command", "ACQUIRE");
+        request.put("lockId", lockId);
+        request.put("nonce", System.currentTimeMillis());
+        request.put("timeout", timeout);
+        request.put("mode", "W");
+        sendCommand(request);
+        JSONObject response = readResponse();
+        if ( response.getString("status").equals("LOCKPENDING") ) {
             while (inputStream.available() == 0) {
                 Thread.sleep(100);
             }
             response = readResponse();
-            if ( response.startsWith("ACQUIRETIMEOUT") ) {
+            if ( response.getString("status").equals("ACQUIRETIMEOUT") ) {
                 throw new Exception("ACQUIRETIMEOUT for " + lockId);
             }
         }
-        return ( response );
+        return ( response.getString("status") );
     }
 
     /**
@@ -188,20 +211,26 @@ public class SimpleClient implements BlockdClient {
      * @throws Exception
      */
     @Override
-    public String acquire(String lockId, int timeout, char mode) throws Exception {
+    public String acquire(String lockId, int timeout, String mode) throws Exception {
 
-        sendCommand(String.format("ACQUIRE %s %d %s", lockId, timeout, mode));
-        String response = readResponse();
-        if ( response.startsWith("LOCKPENDING") ) {
+        JSONObject request = new JSONObject();
+        request.put("command", "ACQUIRE");
+        request.put("lockId", lockId);
+        request.put("nonce", System.currentTimeMillis());
+        request.put("timeout", timeout);
+        request.put("mode", mode);
+        sendCommand(request);
+        JSONObject response = readResponse();
+        if ( response.getString("status").equals("LOCKPENDING") ) {
             while (inputStream.available() == 0) {
                 Thread.sleep(100);
             }
             response = readResponse();
-            if ( response.startsWith("ACQUIRETIMEOUT") ) {
+            if ( response.getString("status").equals("ACQUIRETIMEOUT") ) {
                 throw new Exception("ACQUIRETIMEOUT for " + lockId);
             }
         }
-        return ( response );
+        return ( response.getString("status") );
     }
 
     /**
@@ -214,12 +243,16 @@ public class SimpleClient implements BlockdClient {
     @Override
     public String release(String lockId) throws Exception {
 
-        sendCommand(String.format("RELEASE %s", lockId));
-        String response = readResponse();
-        if (response.startsWith("NOLOCKTORELEASE") ) {
+        JSONObject request = new JSONObject();
+        request.put("command", "RELEASE");
+        request.put("lockId", lockId);
+        request.put("nonce", System.currentTimeMillis());
+        sendCommand(request);
+        JSONObject response = readResponse();
+        if ("NOLOCKTORELEASE".equals(response.getString("status")) ) {
             throw new Exception("NOLOCKTORELEASE for " + lockId);
         }
-        return (response);
+        return (response.getString("status"));
     }
 
     /**
@@ -229,12 +262,22 @@ public class SimpleClient implements BlockdClient {
      * @throws Exception
      */
     @Override
-    public String releaseAll() throws Exception {
+    public List<String> releaseAll() throws Exception {
 
-        sendCommand("RELEASEALL");
-        // TODO: Server will send a RELEASED XYZ for each
-        // lock, so get them all.
-        return (readResponse());
+        List<String> lockIds = new ArrayList<String>();
+        JSONObject request = new JSONObject();
+        request.put("command", "RELEASEALL");
+        request.put("nonce", System.currentTimeMillis());
+        sendCommand(request);
+        JSONObject response = readResponse();
+        if ( "NOLOCKSTORELEASEALL".equals(response.getString("status")) == false ) {
+            lockIds.add(response.getString("lockId"));
+            while ( inputStream.available() > 0 ) {
+                response = readResponse();
+                lockIds.add(response.getString("lockId"));
+            }
+        }
+        return (lockIds);
     }
 
     /**
@@ -244,9 +287,10 @@ public class SimpleClient implements BlockdClient {
      * @param cmd The string to be printed.
      * @throws Exception
      */
-    private synchronized void sendCommand(String cmd) throws Exception {
+    private synchronized void sendCommand(JSONObject cmd) throws Exception {
 
-        outputStream.write(cmd.getBytes());
+        System.out.println("SEND: " + cmd.toString());
+        outputStream.write(cmd.toString().getBytes());
         outputStream.write('\n');
         outputStream.flush();
     }
@@ -258,7 +302,7 @@ public class SimpleClient implements BlockdClient {
      * @return The string that was read.
      * @throws IOException
      */
-    private synchronized String readResponse() throws IOException {
+    private synchronized JSONObject readResponse() throws Exception {
 
         int maxBytes = 1024;
         byte[] buffer = new byte[maxBytes];
@@ -277,44 +321,11 @@ public class SimpleClient implements BlockdClient {
                                               + maxBytes + " bytes!");
             }
         }
-        return new String(buffer, 0, bytesRead);
+        String result = new String(buffer, 0, bytesRead);
+        System.out.println("RECV: " + result);
+        JSONObject response = new JSONObject(result);
+        return ( response );
     }
 
-    /**
-     * This method adds a <code>BlockdListener</code> to this client
-     * for notification of async command results.
-     *
-     * @param listener  The listener to add.
-     */
-    @Override
-    public void addBlockdListener(BlockdListener listener) {
 
-        if ( !listeners.contains(listener) ) {
-            listeners.add(listener);
-        }
-    }
-
-    /**
-     * This method removes a previously added <code>BlockdListener</code>
-     * from this client.
-     *
-     * @param listener The listener to remove.
-     */
-    @Override
-    public void removeBlockdListener(BlockdListener listener) {
-
-        listeners.remove(listener);
-    }
-
-    /**
-     * This method returns a list of the currently reigstered
-     * <code>BlockdListener</code> listeners.
-     *
-     * @return  The list of current listeners.
-     */
-    @Override
-    public List<BlockdListener> getListeners() {
-
-        return ( listeners );
-    }
 }

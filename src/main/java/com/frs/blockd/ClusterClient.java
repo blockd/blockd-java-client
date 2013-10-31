@@ -12,7 +12,6 @@ import java.util.TreeMap;
  */
 public class ClusterClient implements BlockdClient {
 
-    private ArrayList<BlockdListener> listeners = new ArrayList<BlockdListener>();
     private TreeMap<Integer, SimpleClient> nodes = new TreeMap<Integer, SimpleClient>();
 
     /**
@@ -155,11 +154,10 @@ public class ClusterClient implements BlockdClient {
      * @return
      * @throws Exception
      */
-    @Override
     public String wisdom() throws Exception {
 
         BlockdClient client = nodes.get(nodes.keySet().iterator().next());
-        return (client.wisdom());
+        return client.wisdom();
     }
 
     /**
@@ -169,20 +167,18 @@ public class ClusterClient implements BlockdClient {
      * @throws Exception
      */
     @Override
-    public String show() throws Exception {
+    public List<String> show() throws Exception {
 
+        List<String> lockIds = new ArrayList<String>();
         StringBuilder buff = new StringBuilder();
         Iterator<Integer> keys = nodes.keySet().iterator();
         while (keys.hasNext()) {
             BlockdClient client = nodes.get(keys.next());
             buff.append(client.getHost());
-            buff.append(":");
             buff.append(client.getPort());
-            buff.append("-");
-            buff.append(client.show());
-            buff.append("\n");
+            lockIds.addAll(client.show());
         }
-        return (buff.toString());
+        return (lockIds);
     }
 
     /**
@@ -224,7 +220,7 @@ public class ClusterClient implements BlockdClient {
      * @throws Exception
      */
     @Override
-    public String acquire(String lockId, int timeout, char mode) throws Exception {
+    public String acquire(String lockId, int timeout, String mode) throws Exception {
 
         BlockdClient client = nodes.get(whichNode(lockId));
         return client.acquire(lockId, timeout, mode);
@@ -251,54 +247,15 @@ public class ClusterClient implements BlockdClient {
      * @throws Exception
      */
     @Override
-    public String releaseAll() throws Exception {
+    public List<String> releaseAll() throws Exception {
 
-        StringBuffer buff = new StringBuffer();
-
+        List<String> lockIds = new ArrayList<String>();
         Iterator<Integer> keys = nodes.keySet().iterator();
         while (keys.hasNext()) {
             BlockdClient client = nodes.get(keys.next());
-            buff.append(client.releaseAll());
-            buff.append("\n");
+            lockIds.addAll(client.releaseAll());
         }
-        return (buff.toString());
+        return (lockIds);
     }
 
-    /**
-     * This method adds a <code>BlockdListener</code> to this client
-     * for notification of async command results.
-     *
-     * @param listener  The listener to add.
-     */
-    @Override
-    public void addBlockdListener(BlockdListener listener) {
-
-        if ( !listeners.contains(listener) ) {
-            listeners.add(listener);
-        }
-    }
-
-    /**
-     * This method removes a previously added <code>BlockdListener</code>
-     * from this client.
-     *
-     * @param listener The listener to remove.
-     */
-    @Override
-    public void removeBlockdListener(BlockdListener listener) {
-
-        listeners.remove(listener);
-    }
-
-    /**
-     * This method returns a list of the currently reigstered
-     * <code>BlockdListener</code> listeners.
-     *
-     * @return  The list of current listeners.
-     */
-    @Override
-    public List<BlockdListener> getListeners() {
-
-        return ( listeners );
-    }
 }

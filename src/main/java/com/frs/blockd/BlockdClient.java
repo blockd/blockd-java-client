@@ -46,8 +46,6 @@ public interface BlockdClient {
     /**
      * Implements the WISDOM operation.
      *
-     * @return
-     * @throws Exception
      */
     public String wisdom() throws Exception;
 
@@ -57,7 +55,7 @@ public interface BlockdClient {
      * @return
      * @throws Exception
      */
-    public String show() throws Exception;
+    public List<String> show() throws Exception;
 
     /**
      * Implements the ACQUIRE [lockId] operation.
@@ -87,7 +85,7 @@ public interface BlockdClient {
      * @return
      * @throws Exception
      */
-    public String acquire(String lockId, int timeout, char mode) throws Exception;
+    public String acquire(String lockId, int timeout, String mode) throws Exception;
 
     /**
      * Implements the RELEASE [lockId] operation.
@@ -104,11 +102,6 @@ public interface BlockdClient {
      * @return
      * @throws Exception
      */
-    public String releaseAll() throws Exception;
+    public List<String> releaseAll() throws Exception;
 
-    public void addBlockdListener(BlockdListener listener);
-
-    public void removeBlockdListener(BlockdListener listener);
-
-    public List<BlockdListener> getListeners();
 }
